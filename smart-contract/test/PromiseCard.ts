@@ -21,6 +21,7 @@ describe("PromiseCard", function () {
     PromiseCard = await PC.deploy(250, ethers.parseEther("0.01"), 60 * 60 * 24); // 2.5% fee
     await PromiseCard.waitForDeployment();
 
+    // preload native balance
     await deployer.sendTransaction({ to: PromiseCard.target, value: ethers.parseEther("1") });
   });
 
@@ -30,7 +31,7 @@ describe("PromiseCard", function () {
       "Need funds for books",
       "Education",
       "QmMediaHash",
-      ethers.ZeroAddress,
+      ethers.ZeroAddress, // ETH
       ethers.parseEther("0.05"),
       true,
       0
@@ -41,31 +42,32 @@ describe("PromiseCard", function () {
     expect(promise.creator).to.equal(alice.address);
     expect(promise.amountRequested).to.equal(ethers.parseEther("0.05"));
 
-    await PromiseCard.connect(bob).donate(id, ethers.ZeroAddress, ethers.parseEther("0.01"), { value: ethers.parseEther("0.01") });
+    // donate in ETH (no token arg anymore)
+    await PromiseCard.connect(bob).donate(id, ethers.parseEther("0.01"), { value: ethers.parseEther("0.01") });
 
     const donated = await PromiseCard.donations(id, bob.address);
 
     const expected = (ethers.parseEther("0.01") * 975n) / 1000n;
-
     expect(donated).to.equal(expected);
 
     const rep = await PromiseCard.reputation(bob.address);
     expect(Number(rep)).to.be.greaterThan(0);
 
-    await PromiseCard.connect(deployer).fulfillPromise(id, bob.address);
+    // only creator can fulfill now
+    await PromiseCard.connect(alice).fulfillPromise(id, bob.address);
 
     const p2 = await PromiseCard.promises(id);
     expect(p2.fulfilled).to.be.true;
     expect(p2.fulfiller).to.equal(bob.address);
   });
 
-  it("accepts ERC20 donations and batch donate", async function () {
+  it("accepts ERC20 donations", async function () {
     await PromiseCard.connect(alice).createPromise(
       "Buy supplies",
       "Stationery",
       "Education",
       "",
-      MockERC20.target,
+      MockERC20.target, // ERC20
       ethers.parseUnits("1000", 18),
       true,
       0
@@ -75,11 +77,11 @@ describe("PromiseCard", function () {
     await MockERC20.connect(deployer).mint(bob.address, ethers.parseUnits("500", 18));
     await MockERC20.connect(bob).approve(PromiseCard.target, ethers.parseUnits("200", 18));
 
-    await PromiseCard.connect(bob).donate(id, MockERC20.target, ethers.parseUnits("200", 18));
+    // donate with ERC20 (no token arg, contract enforces promise.token)
+    await PromiseCard.connect(bob).donate(id, ethers.parseUnits("200", 18));
+
     const donated = await PromiseCard.donations(id, bob.address);
-
     const expected = (ethers.parseUnits("200", 18) * 975n) / 1000n;
-
     expect(donated).to.equal(expected);
   });
 
