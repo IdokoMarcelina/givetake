@@ -21,7 +21,6 @@ describe("PromiseCard", function () {
     PromiseCard = await PC.deploy(250, ethers.parseEther("0.01"), 60 * 60 * 24); // 2.5% fee
     await PromiseCard.waitForDeployment();
 
-    // preload native balance
     await deployer.sendTransaction({ to: PromiseCard.target, value: ethers.parseEther("1") });
   });
 
@@ -31,7 +30,7 @@ describe("PromiseCard", function () {
       "Need funds for books",
       "Education",
       "QmMediaHash",
-      ethers.ZeroAddress, // ETH
+      ethers.ZeroAddress, 
       ethers.parseEther("0.05"),
       true,
       0
@@ -42,7 +41,6 @@ describe("PromiseCard", function () {
     expect(promise.creator).to.equal(alice.address);
     expect(promise.amountRequested).to.equal(ethers.parseEther("0.05"));
 
-    // donate in ETH (no token arg anymore)
     await PromiseCard.connect(bob).donate(id, ethers.parseEther("0.01"), { value: ethers.parseEther("0.01") });
 
     const donated = await PromiseCard.donations(id, bob.address);
@@ -53,7 +51,6 @@ describe("PromiseCard", function () {
     const rep = await PromiseCard.reputation(bob.address);
     expect(Number(rep)).to.be.greaterThan(0);
 
-    // only creator can fulfill now
     await PromiseCard.connect(alice).fulfillPromise(id, bob.address);
 
     const p2 = await PromiseCard.promises(id);
@@ -67,7 +64,7 @@ describe("PromiseCard", function () {
       "Stationery",
       "Education",
       "",
-      MockERC20.target, // ERC20
+      MockERC20.target, 
       ethers.parseUnits("1000", 18),
       true,
       0
@@ -77,7 +74,6 @@ describe("PromiseCard", function () {
     await MockERC20.connect(deployer).mint(bob.address, ethers.parseUnits("500", 18));
     await MockERC20.connect(bob).approve(PromiseCard.target, ethers.parseUnits("200", 18));
 
-    // donate with ERC20 (no token arg, contract enforces promise.token)
     await PromiseCard.connect(bob).donate(id, ethers.parseUnits("200", 18));
 
     const donated = await PromiseCard.donations(id, bob.address);
